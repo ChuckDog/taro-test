@@ -11,7 +11,16 @@ export default function Index() {
   const [status, setStatus] = useState(false);
   useEffect(() => {
     RecorderManager.onStop(rsp => {
+      console.log('==========================onStopRecord================================');
       console.log(`this is record stop: ${rsp}`);
+    });
+    Taro.onAccelerometerChange((res) => {
+      console.log('==================onAccelerometerChange===============================');
+      console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
+    });
+    Taro.onGyroscopeChange((res) => {
+      console.log('========================onGyroscopeChange=============================');
+      console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
     });
   }, [RecorderManager]);
   useEffect(() => {

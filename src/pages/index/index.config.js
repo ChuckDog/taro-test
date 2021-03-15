@@ -1,3 +1,4 @@
 export default {
-  navigationBarTitleText: "demo"
+  navigationBarTitleText: "demo",
+  component: true,
 };
