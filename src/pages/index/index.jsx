@@ -8,7 +8,7 @@ import "./index.scss";
 
 let counter = 0;
 let recordAccelerometer = {};
-let recordGyroscope = {};
+// let recordGyroscope = {};
 
 export default function Index() {
   const RecorderManager = Taro.getRecorderManager();
@@ -23,11 +23,11 @@ export default function Index() {
       // console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
       recordAccelerometer[counter].push(res);
     });
-    Taro.onGyroscopeChange((res) => {
-      // console.log('========================onGyroscopeChange=============================');
-      // console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
-      recordGyroscope[counter].push(res);
-    });
+    // Taro.onGyroscopeChange((res) => {
+    //   console.log('========================onGyroscopeChange=============================');
+    //   console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
+    //   recordGyroscope[counter].push(res);
+    // });
   }, [RecorderManager]);
   useEffect(() => {
     if (status) {
@@ -44,27 +44,27 @@ export default function Index() {
         //   console.log(`this is accelerometer tracker done: ${rsp}`);
         // }
       });
-      Taro.startGyroscope({
-        interval: "ui",
-        // success: rsp => {
-        //   console.log(`this is gyroscope tracker: ${rsp}`);
-        // },
-        // fail: err => {
-        //   console.log(`gyroscope tracker fail: ${err}`);
-        // },
-        // complete: rsp => {
-        //   console.log(`this is gyroscope tracker done: ${rsp}`);
-        // }
-      });
+      // Taro.startGyroscope({
+      //   interval: "ui",
+      //   success: rsp => {
+      //     console.log(`this is gyroscope tracker: ${rsp}`);
+      //   },
+      //   fail: err => {
+      //     console.log(`gyroscope tracker fail: ${err}`);
+      //   },
+      //   complete: rsp => {
+      //     console.log(`this is gyroscope tracker done: ${rsp}`);
+      //   }
+      // });
       // RecorderManager.start({ duration: 5000 });
     } else {
       Taro.stopAccelerometer();
-      Taro.stopGyroscope();
+      // Taro.stopGyroscope();
       setTimeout(function() {
         counter++;
-        console.log(counter, "-------------------> counter end");
+        // console.log(counter, "-------------------> counter end");
         recordAccelerometer[counter] = [];
-        recordGyroscope[counter] = [];
+        // recordGyroscope[counter] = [];
       }, 2000);
       // RecorderManager.stop();
     }
@@ -76,7 +76,7 @@ export default function Index() {
     );
     console.log({
       recordAccelerometer,
-      recordGyroscope,
+      // recordGyroscope,
     });
   };
 
@@ -86,7 +86,7 @@ export default function Index() {
     );
     counter = 1;
     recordAccelerometer = { 1: [] };
-    recordGyroscope = { 1: [] };
+    // recordGyroscope = { 1: [] };
   };
 
   return (
