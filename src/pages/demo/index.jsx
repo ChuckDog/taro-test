@@ -37,8 +37,12 @@ export default function Demo() {
     } else if (status === 3) {
       t.drawEnd();
     }
+    console.log(
+      status,
+      "---------------------> status change <----------------"
+    );
   }, [status, btn, t]);
-  const getBtnTerm = () => {
+  const getBtnTerm = useCallback(() => {
     if (status === 0) {
       return "校准";
     } else if (status === 1) {
@@ -48,7 +52,7 @@ export default function Demo() {
     } else if (status === 3) {
       return "绘画中...";
     }
-  };
+  }, [status]);
 
   return (
     <View className="index">

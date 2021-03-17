@@ -22,6 +22,10 @@ export default class spaceTracker {
     this.angleOffset = 2;
     // 移动阈值 超过阈值触发移动 mm
     this.distanceOffset = 10;
+    // 最大校准次数
+    this.maxFocus = 20;
+    // 校准次数
+    this.focusCounter = 0;
     // 三个维度的偏移量校准
     this.offset = {
       x: 0,
@@ -78,6 +82,7 @@ export default class spaceTracker {
       z: 0,
     };
     this.offsetArr = [];
+    this.focusCounter = 0;
     this.status = 0;
     this.statusCallback(this.status);
   }
@@ -99,6 +104,7 @@ export default class spaceTracker {
       z: 0,
     };
     this.offsetArr = [];
+    this.focusCounter = 0;
     this.status = 1;
     this.statusCallback(this.status);
   }
@@ -171,11 +177,12 @@ export default class spaceTracker {
 
     if (!len) {
       this.offsetArr.push(res);
-    } else if (this.checkStable([res, arr[len - 1]], 0.01)) {
+    } else if (this.checkStable([res, arr[len - 1]], 0.01) || this.focusCounter > this.maxFocus) {
       this.offsetArr.push(res);
     } else {
       this.offsetArr = [res];
     }
+    this.focusCounter++
     // 初始化移量校准 并进入等待绘画状态
     if (len === this.threshold) {
       this.initOffset();
