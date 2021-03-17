@@ -41,7 +41,7 @@ export default class spaceTracker {
     // 1秒钟清除一次 angleCounter
     this.angleCounter = 0;
     // 移动阈值 超过阈值触发移动
-    this.distanceOffset = 0.05;
+    this.distanceOffset = 0.01;
     // 最大校准次数
     this.maxFocus = 20;
     // 校准次数
@@ -241,7 +241,7 @@ export default class spaceTracker {
     const r = {
       x: res.x - l.x - o.x,
       y: res.y - l.y - o.y,
-      z: res.z - l.z - o.z,
+      z: res.z - (l.z === 0 ? -this.gravity : l.z) - o.z, // 初始化 过滤重力
     };
 
     this.lastAcc = res;
