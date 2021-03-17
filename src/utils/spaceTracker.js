@@ -19,9 +19,15 @@ export default class spaceTracker {
     // 对焦校准的阈值 总时长 200ms * threshold
     this.threshold = 5;
     // 角加速度失焦阈值
-    this.angleOffset = 2;
+    this.angleThreshold = 2;
+    // 角加速度的累计
+    this.angleOffset = {
+      x: 0,
+      y: 0,
+      z: 0,
+    };
     // 移动阈值 超过阈值触发移动 mm
-    this.distanceOffset = 10;
+    this.distanceOffset = 30;
     // 最大校准次数
     this.maxFocus = 20;
     // 校准次数
@@ -149,12 +155,14 @@ export default class spaceTracker {
       this.coordinateCallback({
         x: c.x,
         y: c.z,
+        z: c.y,
       });
     } else if (this.status === 3 && this.recordCoordinate(res)) {
       // 开始绘画 并推送记录点
       this.coordinateCallback({
         x: c.x,
         y: c.z,
+        z: c.y,
       });
     }
   }
@@ -165,7 +173,10 @@ export default class spaceTracker {
     aOff.x += res.x;
     aOff.y += res.y;
     aOff.z += res.z;
-    if (Math.abs(aOff.x) >= 2 || Math.abs(aOff.y) >= 2) {
+    if (
+      Math.abs(aOff.x) >= this.angleThreshold ||
+      Math.abs(aOff.y) >= this.angleThreshold
+    ) {
       return true;
     }
     return false;
@@ -177,12 +188,15 @@ export default class spaceTracker {
 
     if (!len) {
       this.offsetArr.push(res);
-    } else if (this.checkStable([res, arr[len - 1]], 0.01) || this.focusCounter > this.maxFocus) {
+    } else if (
+      this.checkStable([res, arr[len - 1]], 0.01) ||
+      this.focusCounter > this.maxFocus
+    ) {
       this.offsetArr.push(res);
     } else {
       this.offsetArr = [res];
     }
-    this.focusCounter++
+    this.focusCounter++;
     // 初始化移量校准 并进入等待绘画状态
     if (len === this.threshold) {
       this.initOffset();
@@ -193,6 +207,7 @@ export default class spaceTracker {
   // 计算物理距离 更新坐标点 并过滤掉噪声点 s = 1/2 * a * 200ms ==> s = 200*a(mm)
   recordCoordinate(res) {
     const c = this.coordinate;
+    const offset = this.offset;
     // TODO: 转换成像素值 对应镜子坐标
     const r = {
       x: (res.x - offset.x) * 200,
