@@ -1,4 +1,4 @@
 export default {
-  navigationBarTitleText: "数据",
+  navigationBarTitleText: "demo",
   component: true,
 };
