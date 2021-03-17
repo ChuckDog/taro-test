@@ -16,18 +16,32 @@ export default class spaceTracker {
   constructor({ statusCallback, coordinateCallback }) {
     // 重力加速度
     this.gravity = 0.98;
+    // 镜子物理宽高 522 * 934 mm
+    this.mirror = {
+      width: 522,
+      height: 934,
+    };
+    // 镜子分辨率 2160 * 3840 px
+    this.mirrorPixel = {
+      width: 2160,
+      height: 3840,
+    };
     // 对焦校准的阈值 总时长 200ms * threshold
     this.threshold = 5;
     // 角加速度失焦阈值
     this.angleThreshold = 2;
-    // 角加速度的累计
+    // 角加速度失焦时间阈值 4m
+    this.angleTimeThreshold = 20;
+    // 失焦角加速的的累计 x, y 轴超过 angleThreshold 则失焦
     this.angleOffset = {
       x: 0,
       y: 0,
       z: 0,
     };
-    // 移动阈值 超过阈值触发移动 mm
-    this.distanceOffset = 30;
+    // 1秒钟清除一次 angleCounter
+    this.angleCounter = 0;
+    // 移动阈值 超过阈值触发移动
+    this.distanceOffset = 0.01;
     // 最大校准次数
     this.maxFocus = 20;
     // 校准次数
@@ -44,14 +58,20 @@ export default class spaceTracker {
       y: 0,
       z: 0,
     };
-    // 失焦角加速的的累计 x, y 轴超过 angleOffset 则失焦
-    this.offsetAngle = {
+    // 收集偏移量校准数组
+    this.offsetArr = [];
+    // 上一次的三维加速度
+    this.lastAcc = {
       x: 0,
       y: 0,
       z: 0,
     };
-    // 收集偏移量校准数组
-    this.offsetArr = [];
+    // 上一次的三维角加速度
+    this.lastGyr = {
+      x: 0,
+      y: 0,
+      z: 0,
+    };
     // tracker 画笔状态 0 失焦 1 校准中 2 校准完成等待绘画 3 绘画中
     this.status = 0;
     Taro.onAccelerometerChange((res) => {
@@ -72,28 +92,18 @@ export default class spaceTracker {
 
   // 失焦处理
   outOfFocus() {
-    this.offset = {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
-    this.coordinate = {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
-    this.offsetAngle = {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
-    this.offsetArr = [];
-    this.focusCounter = 0;
+    this.initData();
     this.status = 0;
     this.statusCallback(this.status);
   }
   // 触发校准
   focus() {
+    this.initData();
+    this.status = 1;
+    this.statusCallback(this.status);
+  }
+  // init data source
+  initData() {
     this.offset = {
       x: 0,
       y: 0,
@@ -104,15 +114,23 @@ export default class spaceTracker {
       y: 0,
       z: 0,
     };
-    this.offsetAngle = {
+    this.angleOffset = {
+      x: 0,
+      y: 0,
+      z: 0,
+    };
+    this.lastAcc = {
+      x: 0,
+      y: 0,
+      z: 0,
+    };
+    this.lastGyr = {
       x: 0,
       y: 0,
       z: 0,
     };
     this.offsetArr = [];
     this.focusCounter = 0;
-    this.status = 1;
-    this.statusCallback(this.status);
   }
   // start drawing
   drawStart() {
@@ -145,40 +163,52 @@ export default class spaceTracker {
   }
   // 加速度变化
   onAccelerometerChange(res) {
-    const c = this.coordinate;
-
     // 开始调焦
     if (this.status === 1) {
       this.doFocusing(res);
     } else if (this.status === 2 && this.recordCoordinate(res)) {
       // 开始跟踪 并推送记录点
-      this.coordinateCallback({
-        x: c.x,
-        y: c.z,
-        z: c.y,
-      });
+      this.coordinateCallback(this.transfer());
     } else if (this.status === 3 && this.recordCoordinate(res)) {
       // 开始绘画 并推送记录点
-      this.coordinateCallback({
-        x: c.x,
-        y: c.z,
-        z: c.y,
-      });
+      this.coordinateCallback(this.transfer());
     }
+  }
+  // 加速度转过像素点  s = 1/2 * a * 200ms * 200ms ==> s = 200*a(mm)
+  transfer() {
+    const c = this.coordinate;
+
+    return {
+      x: ((c.x * 200) / this.mirror.width) * this.mirrorPixel.width,
+      y: c.z,
+      z: ((c.y * 200) / this.mirror.height) * this.mirrorPixel.height,
+    };
   }
   // 失焦检查
   focusCheck(res) {
     const aOff = this.angleOffset;
+    const l = this.lastGyr;
 
-    aOff.x += res.x;
-    aOff.y += res.y;
-    aOff.z += res.z;
+    aOff.x += res.x - l.x;
+    aOff.y += res.y - l.y;
+    aOff.z += res.z - l.z;
+    this.lastGyr = res;
     if (
-      Math.abs(aOff.x) >= this.angleThreshold ||
-      Math.abs(aOff.y) >= this.angleThreshold
+      Math.abs(aOff.x) > this.angleThreshold ||
+      Math.abs(aOff.y) > this.angleThreshold
     ) {
       return true;
     }
+    // 一秒钟清空一次 角加速度的累积
+    if (this.angleCounter > this.angleTimeThreshold) {
+      this.angleOffset = {
+        x: 0,
+        y: 0,
+        z: 0,
+      };
+      this.angleCounter = 0;
+    }
+    this.angleCounter++;
     return false;
   }
   // 校准过程
@@ -204,28 +234,26 @@ export default class spaceTracker {
       this.statusCallback(this.status);
     }
   }
-  // 计算物理距离 更新坐标点 并过滤掉噪声点 s = 1/2 * a * 200ms ==> s = 200*a(mm)
+  // 计算物理距离 更新坐标点 并过滤掉噪声点
   recordCoordinate(res) {
     const c = this.coordinate;
-    const offset = this.offset;
-    // TODO: 转换成像素值 对应镜子坐标
+    const l = this.lastAcc;
+    const o = this.offset;
     const r = {
-      x: (res.x - offset.x) * 200,
-      y: (res.y - offset.y) * 200,
-      z: (res.z - offset.z) * 200,
+      x: res.x - l.x - o.x,
+      y: res.y - l.y - o.y,
+      z: res.z - l.z - o.z,
     };
 
-    c.x += r.x;
-    c.y += r.y;
-    c.z += r.z;
-    // 移动小于 distanceOffset 不更新
-    if (
-      Math.sqrt(Math.pow(r.x - c.x, 2) + Math.pow(r.z - c.x, 2)) <
-      this.distanceOffset
-    ) {
+    this.lastAcc = res;
+    // 滤掉微弱抖动 不更新
+    if (Math.abs(r.x) > this.distanceOffset || Math.abs(r.z) > this.distanceOffset) {
       return false;
     }
     // 更新 coordinate
+    c.x += r.x;
+    c.y += r.y;
+    c.z += r.z;
     return true;
   }
   // 检查两个点间的矢量变化 是否在阈值范围内
@@ -266,7 +294,7 @@ export default class spaceTracker {
     this.offset = {
       x: (r.xMax - r.xMin) / 2,
       y: (r.yMax - r.yMin) / 2,
-      z: (r.zMax - r.zMin) / 2 - this.gravity,
+      z: (r.zMax - r.zMin) / 2,
     };
   }
 }

@@ -29,6 +29,10 @@ export default function Demo() {
     };
   }, []);
   useEffect(() => {
+    console.log(
+      status,
+      "---------------------> status change <----------------"
+    );
     if (!btn) return;
     if (status === 0) {
       t.focus();
@@ -37,10 +41,6 @@ export default function Demo() {
     } else if (status === 3) {
       t.drawEnd();
     }
-    console.log(
-      status,
-      "---------------------> status change <----------------"
-    );
   }, [status, btn, t]);
   const getBtnTerm = useCallback(() => {
     if (status === 0) {

@@ -18,16 +18,16 @@ export default function Index() {
     //   console.log('==========================onStopRecord================================');
     //   console.log(`this is record stop: ${rsp}`);
     // });
-    Taro.onAccelerometerChange((res) => {
-      // console.log('==================onAccelerometerChange===============================');
-      // console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
-      recordAccelerometer[counter].push(res);
-    });
-    Taro.onGyroscopeChange((res) => {
-      // console.log('========================onGyroscopeChange=============================');
-      // console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
-      recordGyroscope[counter].push(res);
-    });
+    // Taro.onAccelerometerChange((res) => {
+    //   console.log('==================onAccelerometerChange===============================');
+    //   console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
+    //   recordAccelerometer[counter].push(res);
+    // });
+    // Taro.onGyroscopeChange((res) => {
+    //   console.log('========================onGyroscopeChange=============================');
+    //   console.log(`x: ${res.x}; y: ${res.y}; z: ${res.z};`);
+    //   recordGyroscope[counter].push(res);
+    // });
   }, [RecorderManager]);
   useEffect(() => {
     if (status) {
