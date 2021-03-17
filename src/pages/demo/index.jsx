@@ -33,15 +33,12 @@ export default function Demo() {
       status,
       "---------------------> status change <----------------"
     );
-    if (!btn) return;
-    if (status === 0) {
+  }, [status]);
+  useEffect(() => {
+    if (status === 0 && btn) {
       t.focus();
-    } else if (status === 2) {
-      t.drawStart();
-    } else if (status === 3) {
-      t.drawEnd();
     }
-  }, [status, btn, t]);
+  }, [btn, status]);
   const getBtnTerm = useCallback(() => {
     if (status === 0) {
       return "校准";
