@@ -180,8 +180,7 @@ export default class spaceTracker {
 
     return {
       x: ((c.x * 200) / this.mirror.width) * this.mirrorPixel.width,
-      y: c.z,
-      z: ((c.y * 200) / this.mirror.height) * this.mirrorPixel.height,
+      y: ((c.z * 200) / this.mirror.height) * this.mirrorPixel.height,
     };
   }
   // 失焦检查
@@ -247,7 +246,10 @@ export default class spaceTracker {
 
     this.lastAcc = res;
     // 滤掉微弱抖动 不更新
-    if (Math.abs(r.x) > this.distanceOffset || Math.abs(r.z) > this.distanceOffset) {
+    if (
+      Math.abs(r.x) > this.distanceOffset ||
+      Math.abs(r.z) > this.distanceOffset
+    ) {
       return false;
     }
     // 更新 coordinate
