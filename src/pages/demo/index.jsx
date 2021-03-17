@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
-import React, { useState, useEffect, useCallBack, useRef } from "react";
-// import Taro from "@tarojs/taro";
+import React, { useState, useEffect, useCallback } from "react";
 import { View } from "@tarojs/components";
 import tracker from "../../utils/spaceTracker";
 
@@ -10,33 +9,35 @@ import "./index.scss";
 export default function Demo() {
   const [status, setStatus] = useState(0);
   const [btn, setBtn] = useState(false);
-  const t = useRef(null);
+  const [t, setT] = useState(null);
 
-  const statusCallback = useCallBack((status) => {
+  const statusCallback = useCallback((status) => {
     setStatus(status);
-  });
-  const coordinateCallback = useeCallBack((coordinate) => {
+  }, []);
+  const coordinateCallback = useCallback((coordinate) => {
     console.log(`moving to x: ${coordinate.x}mm; y: ${coordinate.y}mm`);
-  });
+  }, []);
   useEffect(() => {
-    t.current = tracker({
-      statusCallback,
-      coordinateCallback,
-    });
+    setT(
+      new tracker({
+        statusCallback,
+        coordinateCallback,
+      })
+    );
     return () => {
-      t.current.stopTracking();
+      t.stopTracking();
     };
   }, []);
   useEffect(() => {
     if (!btn) return;
     if (status === 0) {
-      t.current.focus();
+      t.focus();
     } else if (status === 2) {
-      t.current.drawStart();
+      t.drawStart();
     } else if (status === 3) {
-      t.current.drawEnd();
+      t.drawEnd();
     }
-  }, [status, btn]);
+  }, [status, btn, t]);
   const getBtnTerm = () => {
     if (status === 0) {
       return "校准";

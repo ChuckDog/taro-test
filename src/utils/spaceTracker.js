@@ -10,6 +10,8 @@
  * drawEnd: 绘画完成
  * stopTracking: 离开页面 停止监听
  */
+
+import Taro from "@tarojs/taro";
 export default class spaceTracker {
   constructor({ statusCallback, coordinateCallback }) {
     // 重力加速度
