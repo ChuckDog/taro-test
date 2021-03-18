@@ -190,6 +190,17 @@ export default function Index() {
       >
         demo
       </Button>
+      <Button
+        className="btn-max-w"
+        plain
+        type="primary"
+        style={{ marginBottom: "20px" }}
+        onClick={() => {
+          Taro.navigateTo({ url: "/pages/canvas/index" });
+        }}
+      >
+        canvas
+      </Button>
     </View>
   );
 }

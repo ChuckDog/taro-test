@@ -1,0 +1,28 @@
+.page {
+  background: #f6f6f6;
+  padding: 5px auto;
+}
+.canvas {
+  border: 1px solid #d0d0d0;
+  margin: 5rpx;
+  background: #f2f2f2;
+}
+.btn {
+  width: 260rpx;
+  position: relative;
+  display: flex;
+  color: #fff;
+  border: 1px solid #6190e8;
+  background: #6190e8;
+  border-radius: 46rpx;
+  background-clip: border-box;
+  overflow: hidden;
+  justify-content: center;
+  margin: 0 auto;
+  padding: 0 32rpx;
+  height: 92rpx;
+  font-size: 32rpx;
+  line-height: 90rpx;
+  text-align: center;
+  box-sizing: border-box;
+}
