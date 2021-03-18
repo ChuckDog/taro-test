@@ -12,6 +12,7 @@ export default function canvas() {
   const arrx = useRef([]);
   const arry = useRef([]);
   const arrz = useRef([]);
+  const allDraws = useRef([]);
   useEffect(() => {
     startCanvas();
   }, []);
@@ -29,7 +30,7 @@ export default function canvas() {
     Taro.getSystemInfo({
       success: function(res) {
         setCanvasw(res.windowWidth - 0);
-        setCanvash(res.windowHeight - 80);
+        setCanvash(res.windowHeight - 150);
         //创建canvas
         initCanvas();
       },
@@ -40,6 +41,7 @@ export default function canvas() {
     arrx.current = [];
     arry.current = [];
     arrz.current = [];
+    allDraws.current = [];
     context.clearRect(0, 0, canvasw, canvash);
     context.draw(true);
   };
@@ -52,6 +54,11 @@ export default function canvas() {
     arrx.current.push(event.changedTouches[0].x);
     arry.current.push(event.changedTouches[0].y);
     arrz.current.push(0);
+    allDraws.current.push({
+      x: arrx.current,
+      y: arry.current,
+      z: arrz.current,
+    });
   };
   const canvasMove = (event) => {
     if (isButtonDown) {
@@ -60,13 +67,31 @@ export default function canvas() {
       arrz.current.push(1);
     }
 
-    for (var i = 0; i < arrx.current.length; i++) {
-      if (arrz[i] == 0) {
-        context.moveTo(arrx.current[i], arry.current[i]);
-      } else {
-        context.lineTo(arrx.current[i], arry.current[i]);
-      }
+    draw();
+  };
+  const canvasEnd = (event) => {
+    setIsButtonDown(false);
+    arrx.current = [];
+    arry.current = [];
+    arrz.current = [];
+    draw();
+  };
+  const redo = (event) => {
+    if (allDraws.current.length) {
+      allDraws.current.splice(allDraws.current.length - 1, 1);
+      draw();
     }
+  };
+  const draw = () => {
+    allDraws.current.forEach((opt) => {
+      for (var i = 0; i < opt.x.length; i++) {
+        if (opt.z[i] == 0) {
+          context.moveTo(opt.x[i], opt.y[i]);
+        } else {
+          context.lineTo(opt.x[i], opt.y[i]);
+        }
+      }
+    });
     context.clearRect(0, 0, canvasw, canvash);
 
     context.setStrokeStyle("#000000");
@@ -77,12 +102,9 @@ export default function canvas() {
 
     context.draw(false);
   };
-  const canvasEnd = (event) => {
-    setIsButtonDown(false);
-  };
   return (
     <View class="container">
-      <View>画布（请在下方区域手写内容）</View>
+      <View>画布</View>
       <Canvas
         style={{ width: `${canvasw}px`, height: `${canvash}px` }}
         class="canvas"
@@ -95,6 +117,7 @@ export default function canvas() {
         onTouchCancel={canvasEnd}
       ></Canvas>
       <View class="btns canvaspd">
+        <Button onClick={redo}>撤销一笔</Button>
         <Button onClick={cleardraw}>清除画板</Button>
       </View>
     </View>

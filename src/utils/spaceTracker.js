@@ -11,7 +11,6 @@
  * stopTracking: 离开页面 停止监听
  */
 
-import Taro from "@tarojs/taro";
 export default class spaceTracker {
   constructor({ statusCallback, coordinateCallback }) {
     // 重力加速度
@@ -77,6 +76,11 @@ export default class spaceTracker {
         z: -this.gravity,
       },
     };
+    this.lastAcc = {
+      x: 0,
+      y: 0,
+      z: -this.gravity,
+    };
     // 收集偏移量校准数组
     this.offsetArr = [];
     // 上一次的三维角加速度
@@ -87,11 +91,11 @@ export default class spaceTracker {
     };
     // tracker 画笔状态 0 失焦 1 校准中 2 校准完成等待绘画 3 绘画中
     this.status = 0;
-    Taro.onAccelerometerChange((res) => {
+    wx.onAccelerometerChange((res) => {
       this.onAccelerometerChange(res);
     });
     // 角速度变化 判断失焦状态
-    Taro.onGyroscopeChange((res) => {
+    wx.onGyroscopeChange((res) => {
       if (this.status && this.focusCheck(res)) {
         this.outOfFocus();
       }
@@ -152,6 +156,11 @@ export default class spaceTracker {
       y: 0,
       z: 0,
     };
+    this.lastAcc = {
+      x: 0,
+      y: 0,
+      z: -this.gravity,
+    };
     this.offsetArr = [];
     this.focusCounter = 0;
   }
@@ -172,17 +181,17 @@ export default class spaceTracker {
   // 打开传感器
   startTracking() {
     // game 20ms ui 60ms normal 200ms (不准确的)
-    Taro.startAccelerometer({
+    wx.startAccelerometer({
       interval: "normal",
     });
-    Taro.startGyroscope({
+    wx.startGyroscope({
       interval: "normal",
     });
   }
   // 退出页面 停止监听
   stopTracking() {
-    Taro.stopAccelerometer();
-    Taro.stopGyroscope();
+    wx.stopAccelerometer();
+    wx.stopGyroscope();
   }
   // 加速度变化
   onAccelerometerChange(res) {
@@ -256,8 +265,8 @@ export default class spaceTracker {
   }
   // 计算物理距离 更新坐标点 并过滤掉噪声点
   recordCoordinate(res) {
-    const c = this.coordinate;
-    const l = this.coordinate.lastAcc;
+    // const c = this.coordinate;
+    const l = this.lastAcc;
     const o = this.offset;
     const r = {
       x: res.x - l.x - o.x,
@@ -274,26 +283,81 @@ export default class spaceTracker {
     }
     // 更新 coordinate
     this.coordinate.time++;
+    this.lastAcc = res;
     // s (mm) = v0t + 1/2*at^
-    this.coordinate.position.x +=
-      this.coordinate.velocity.x * 200 +
-      0.5 * this.accTransfer(res.x, "x") * Math.pow(200, 2);
-    this.coordinate.position.y +=
-      this.coordinate.velocity.y * 200 +
-      0.5 * this.accTransfer(res.z, "y") * Math.pow(200, 2);
-    // mm/ms
-    this.coordinate.velocity.x += res.x * 10 * 0.2;
-    this.coordinate.velocity.y += (res.z + this.gravity) * 10 * 0.2;
-    this.coordinate.lastAcc = res;
-    this.coordinate.mirrorPos = this.transfer(this.coordinate.position);
+    // this.coordinate.position.x +=
+    //   this.coordinate.velocity.x * 200 + 0.5 * this.accTransfer(res.x, 'x') * Math.pow(200, 2);
+    // this.coordinate.position.y +=
+    //   this.coordinate.velocity.y * 200 + 0.5 * this.accTransfer(res.z, 'y') * Math.pow(200, 2);
+    // // mm/ms
+    // this.coordinate.velocity.x += res.x * 10 * 0.2;
+    // this.coordinate.velocity.y += (res.z + this.gravity) * 10 * 0.2;
+    // this.coordinate.lastAcc = res;
+    const preX = {
+      a: this.coordinate.lastAcc.x,
+      v: this.coordinate.velocity.x,
+      s: this.coordinate.position.x,
+    };
+    const nextX = this.getNextState(preX, res.x * 10); // 0.98 * 10 = 9.8 m/s^2
+    const preY = {
+      a: this.coordinate.lastAcc.y,
+      v: this.coordinate.velocity.y,
+      s: this.coordinate.position.y,
+    };
+    const nextY = this.getNextState(preY, (res.z + this.gravity) * 10); // 考虑重力加速度 0.98 * 10 = 9.8 m/s^2
+
+    // 加速度，单位 m/s^2
+    this.coordinate.lastAcc = {
+      x: nextX.a,
+      y: nextY.a,
+    };
+    // 速度，单位 m/s
+    this.coordinate.velocity = {
+      x: nextX.v,
+      y: nextY.v,
+    };
+    // 位移，单位 m
+    this.coordinate.position = {
+      x: nextX.s,
+      y: nextY.s,
+    };
+    // 镜子尺寸位置，单位 mm, 1m = 1000 mm
+    this.coordinate.mirrorPos = this.transfer({
+      x: this.coordinate.position.x * 1000,
+      y: this.coordinate.position.y * 1000,
+    });
     return true;
   }
+  getNextState = (pre, next) => {
+    // pre 是上次的位置数据，next 是当前位置的传感器数据。
+    // 数据准备
+    // 固定数据
+    const t = 0.2; // 单位：s， 200 ms = 0.2 s
+    // 上一个位置的数据
+    const a0 = pre.a; // 单位：m/s^2
+    const v0 = pre.v; // 单位：m/s
+    const s0 = pre.s; // 单位：m
+    // 当前位置的数据
+    const a1 = next; // 单位：m/s^2
+
+    // 数据计算
+    const averageA = 0.5 * (a0 + a1); // 平均加速度
+    const v1 = v0 + averageA * t; // v0 初速度，v1 末速度
+    const averageV = 0.5 * (v0 + v1); // 平均速度
+    const s1 = s0 + averageV * t; // s0 初位移，s1 末位移
+
+    return {
+      a: a1,
+      v: v1,
+      s: s1,
+    };
+  };
   // 加速度转换
   accTransfer(acc, type) {
     if (type === "x") {
-      return (acc * 10) / 1000;
+      return (acc * 10) / 1000; // todo 这里应该是乘以 1000;
     } else if (type === "y") {
-      return ((acc + this.gravity) * 10) / 1000;
+      return ((acc + this.gravity) * 10) / 1000; // todo 这里应该是乘以 1000;
     }
   }
   // 检查两个点间的矢量变化 是否在阈值范围内
