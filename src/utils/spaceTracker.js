@@ -54,18 +54,31 @@ export default class spaceTracker {
     };
     // 空间向量
     this.coordinate = {
-      x: 0,
-      y: 0,
-      z: 0,
+      // 第几次时间返回 间隔约等于200ms
+      time: 0,
+      // 当前点的速度
+      velocity: {
+        x: 0,
+        y: 0,
+      },
+      // 空间坐标
+      position: {
+        x: 0,
+        y: 0,
+      },
+      mirrorPos: {
+        x: 0,
+        y: 0,
+      },
+      // 上一次的加速度 默认初始值
+      lastAcc: {
+        x: 0,
+        y: 0,
+        z: -this.gravity,
+      },
     };
     // 收集偏移量校准数组
     this.offsetArr = [];
-    // 上一次的三维加速度
-    this.lastAcc = {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
     // 上一次的三维角加速度
     this.lastGyr = {
       x: 0,
@@ -110,16 +123,26 @@ export default class spaceTracker {
       z: 0,
     };
     this.coordinate = {
-      x: 0,
-      y: 0,
-      z: 0,
+      time: 0,
+      velocity: {
+        x: 0,
+        y: 0,
+      },
+      position: {
+        x: 0,
+        y: 0,
+      },
+      mirrorPos: {
+        x: 0,
+        y: 0,
+      },
+      lastAcc: {
+        x: 0,
+        y: 0,
+        z: -this.gravity,
+      },
     };
     this.angleOffset = {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
-    this.lastAcc = {
       x: 0,
       y: 0,
       z: 0,
@@ -168,19 +191,17 @@ export default class spaceTracker {
       this.doFocusing(res);
     } else if (this.status === 2 && this.recordCoordinate(res)) {
       // 开始跟踪 并推送记录点
-      this.coordinateCallback(this.transfer());
+      this.coordinateCallback(this.coordinate.mirrorPos);
     } else if (this.status === 3 && this.recordCoordinate(res)) {
       // 开始绘画 并推送记录点
-      this.coordinateCallback(this.transfer());
+      this.coordinateCallback(this.coordinate.mirrorPos);
     }
   }
-  // 加速度转过像素点  s = 1/2 * a * 200ms * 200ms ==> s = 200*a(mm)
-  transfer() {
-    const c = this.coordinate;
-
+  // 物理坐标转换镜子坐标
+  transfer(pos) {
     return {
-      x: ((c.x * 200) / this.mirror.width) * this.mirrorPixel.width,
-      y: ((c.z * 200) / this.mirror.height) * this.mirrorPixel.height,
+      x: (pos.x / this.mirror.width) * this.mirrorPixel.width,
+      y: (pos.y / this.mirror.height) * this.mirrorPixel.height,
     };
   }
   // 失焦检查
@@ -236,15 +257,14 @@ export default class spaceTracker {
   // 计算物理距离 更新坐标点 并过滤掉噪声点
   recordCoordinate(res) {
     const c = this.coordinate;
-    const l = this.lastAcc;
+    const l = this.coordinate.lastAcc;
     const o = this.offset;
     const r = {
       x: res.x - l.x - o.x,
       y: res.y - l.y - o.y,
-      z: res.z - (l.z === 0 ? -this.gravity : l.z) - o.z, // 初始化 过滤重力
+      z: res.z - l.z - o.z,
     };
 
-    this.lastAcc = res;
     // 滤掉微弱抖动 不更新
     if (
       Math.abs(r.x) < this.distanceOffset &&
@@ -253,10 +273,28 @@ export default class spaceTracker {
       return false;
     }
     // 更新 coordinate
-    c.x += r.x;
-    c.y += r.y;
-    c.z += r.z;
+    this.coordinate.time++;
+    // s (mm) = v0t + 1/2*at^
+    this.coordinate.position.x +=
+      this.coordinate.velocity.x * 200 +
+      0.5 * this.accTransfer(res.x, "x") * Math.pow(200, 2);
+    this.coordinate.position.y +=
+      this.coordinate.velocity.y * 200 +
+      0.5 * this.accTransfer(res.z, "y") * Math.pow(200, 2);
+    // mm/ms
+    this.coordinate.velocity.x += res.x * 10 * 0.2;
+    this.coordinate.velocity.y += (res.z + this.gravity) * 10 * 0.2;
+    this.coordinate.lastAcc = res;
+    this.coordinate.mirrorPos = this.transfer(this.coordinate.position);
     return true;
+  }
+  // 加速度转换
+  accTransfer(acc, type) {
+    if (type === "x") {
+      return (acc * 10) / 1000;
+    } else if (type === "y") {
+      return ((acc + this.gravity) * 10) / 1000;
+    }
   }
   // 检查两个点间的矢量变化 是否在阈值范围内
   checkStable(ps, t) {
